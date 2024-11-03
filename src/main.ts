@@ -51,14 +51,15 @@ const map = leaflet.map("map", {
   minZoom: GAMEPLAY_ZOOM_LEVEL,
   maxZoom: GAMEPLAY_ZOOM_LEVEL,
   zoomControl: false,
-  scrollWheelZoom: false
+  scrollWheelZoom: false,
 });
 
 // Populate the map with OpenStreetMap tiles
 leaflet
   .tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
-    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    attribution:
+      '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   })
   .addTo(map);
 
@@ -93,12 +94,15 @@ function spawnCache(i: number, j: number) {
       <div>There is a cache here at "${i},${j}". It has value <span id="value">${pointValue}</span>.</div>
       <button id="poke">poke</button>`;
 
-    popupDiv.querySelector<HTMLButtonElement>("#poke")!.addEventListener("click", () => {
-      pointValue--;
-      popupDiv.querySelector<HTMLSpanElement>("#value")!.innerHTML = pointValue.toString();
-      playerPoints++;
-      statusPanel.innerHTML = `${playerPoints} points accumulated`;
-    });
+    popupDiv
+      .querySelector<HTMLButtonElement>("#poke")!
+      .addEventListener("click", () => {
+        pointValue--;
+        popupDiv.querySelector<HTMLSpanElement>("#value")!.innerHTML =
+          pointValue.toString();
+        playerPoints++;
+        statusPanel.innerHTML = `${playerPoints} points accumulated`;
+      });
 
     return popupDiv;
   });
