@@ -1,15 +1,24 @@
+// @deno-types="npm:@types/leaflet@^1.9.14"
+import leaflet from "leaflet";
+
 // Import CSS styles
 import "./style.css";
-
-// Import Leaflet and its CSS
-import leaflet from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// App setup
-const APP_NAME = "Coin Hunter 💰";
-const app = document.querySelector<HTMLDivElement>("#app")!;
+// Import additional utilities
+import "./leafletWorkaround.ts";
+import luck from "./luck.ts"; // Deterministic random number generator
 
-// Set document title and add innerHTML structure
+// Define constants
+const APP_NAME = "Coin Hunter 💰";
+const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504); // Classroom location
+const GAMEPLAY_ZOOM_LEVEL = 17; // Adjusted zoom level to make the map appear smaller
+const TILE_DEGREES = 1e-4;
+const NEIGHBORHOOD_SIZE = 8;
+const CACHE_SPAWN_PROBABILITY = 0.1;
+
+// Set up the app's HTML structure
+const app = document.querySelector<HTMLDivElement>("#app")!;
 document.title = APP_NAME;
 app.innerHTML = `
   <header class="app-header">
@@ -20,6 +29,7 @@ app.innerHTML = `
     <!-- Main Content with Map -->
     <main class="main-content">
       <div id="map" class="map-container"></div> <!-- Map container for Leaflet -->
+      <div id="statusPanel" class="status-panel">No points yet...</div> <!-- Status panel for player points -->
     </main>
 
     <!-- Sidebar on the right side -->
@@ -35,19 +45,16 @@ app.innerHTML = `
 `;
 
 // Initialize Leaflet Map
-const INITIAL_LOCATION = leaflet.latLng(36.98949379578401, -122.06277128548504); // Example coordinates
-const ZOOM_LEVEL = 15; // Initial zoom level for the map
-
 const map = leaflet.map("map", {
-  center: INITIAL_LOCATION,
-  zoom: ZOOM_LEVEL,
-  minZoom: ZOOM_LEVEL,
-  maxZoom: ZOOM_LEVEL,
-  zoomControl: true, // Display zoom controls
-  scrollWheelZoom: true // Allow zooming with scroll wheel
+  center: OAKES_CLASSROOM,
+  zoom: GAMEPLAY_ZOOM_LEVEL,
+  minZoom: GAMEPLAY_ZOOM_LEVEL,
+  maxZoom: GAMEPLAY_ZOOM_LEVEL,
+  zoomControl: false,
+  scrollWheelZoom: false
 });
 
-// Add a tile layer from OpenStreetMap
+// Populate the map with OpenStreetMap tiles
 leaflet
   .tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
@@ -55,13 +62,53 @@ leaflet
   })
   .addTo(map);
 
-// Add a player marker at the initial location
-const playerMarker = leaflet.marker(INITIAL_LOCATION);
-playerMarker.bindTooltip("You are here!"); // Tooltip to show on hover
+// Add a marker to represent the player's starting location
+const playerMarker = leaflet.marker(OAKES_CLASSROOM);
+playerMarker.bindTooltip("That's you!");
 playerMarker.addTo(map);
 
-// Demo event listener for the central button
-const centerBtn = document.querySelector<HTMLButtonElement>("#centerBtn")!;
-centerBtn.addEventListener("click", () => {
-    alert("You clicked the central button!");
-});
+// Player points display
+let playerPoints = 0;
+const statusPanel = document.querySelector<HTMLDivElement>("#statusPanel")!;
+statusPanel.innerHTML = "No points yet...";
+
+// Function to spawn caches at random locations
+function spawnCache(i: number, j: number) {
+  // Calculate cell boundaries based on TILE_DEGREES
+  const origin = OAKES_CLASSROOM;
+  const bounds = leaflet.latLngBounds([
+    [origin.lat + i * TILE_DEGREES, origin.lng + j * TILE_DEGREES],
+    [origin.lat + (i + 1) * TILE_DEGREES, origin.lng + (j + 1) * TILE_DEGREES],
+  ]);
+
+  // Add a rectangle to the map to represent a cache
+  const rect = leaflet.rectangle(bounds);
+  rect.addTo(map);
+
+  // Set up interaction for each cache
+  rect.bindPopup(() => {
+    let pointValue = Math.floor(luck([i, j, "initialValue"].toString()) * 100);
+    const popupDiv = document.createElement("div");
+    popupDiv.innerHTML = `
+      <div>There is a cache here at "${i},${j}". It has value <span id="value">${pointValue}</span>.</div>
+      <button id="poke">poke</button>`;
+
+    popupDiv.querySelector<HTMLButtonElement>("#poke")!.addEventListener("click", () => {
+      pointValue--;
+      popupDiv.querySelector<HTMLSpanElement>("#value")!.innerHTML = pointValue.toString();
+      playerPoints++;
+      statusPanel.innerHTML = `${playerPoints} points accumulated`;
+    });
+
+    return popupDiv;
+  });
+}
+
+// Populate the map with caches based on spawn probability
+for (let i = -NEIGHBORHOOD_SIZE; i < NEIGHBORHOOD_SIZE; i++) {
+  for (let j = -NEIGHBORHOOD_SIZE; j < NEIGHBORHOOD_SIZE; j++) {
+    if (luck([i, j].toString()) < CACHE_SPAWN_PROBABILITY) {
+      spawnCache(i, j);
+    }
+  }
+}
