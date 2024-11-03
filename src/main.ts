@@ -11,7 +11,7 @@ app.innerHTML = `
   <canvas id="canvas" width="256" height="256"></canvas>
   <!-- First row for tool buttons -->
   <div id="R1Button">
-    <button id="alertBtn">Show Alert</button> <!-- New button added -->
+    <button id="alertBtn">Show Alert</button> <!-- New button -->
   </div>
 `;
 
