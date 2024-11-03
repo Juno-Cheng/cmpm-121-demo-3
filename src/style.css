@@ -1,85 +1,145 @@
-root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+/* style.css */
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
+*,
+*::before,
+*::after {
+    box-sizing: border-box; /* Ensures padding and borders are included in element width and height */
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Prevent scrolling */
+    width: 100%;
+    height: 100%;
+    font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+    background-color: #242424;
+    color-scheme: light dark;
 }
 
-a:hover {
-  color: #535bf2;
+:root {
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-#controlPanel {
-  padding: 1rem;
-}
-
-#statusPanel {
-  padding: 1rem;
-}
-
-#map {
+/* Header */
+.app-header {
   width: 100%;
-  height: 80vh;
+  padding: 1rem 2rem; /* Adds extra padding on the sides */
+  background-color: #000000;
+  color: #ffffff;
+  display: flex;
+  justify-content: space-between; /* Aligns items with space between them */
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
+.app-header h1 {
+  font-size: 1.8em;
+  margin: 0;
 }
 
-button:hover {
-  border-color: #646cff;
+
+/* Main Body Layout */
+.app-body {
+    display: flex;
+    flex: 1;
+    width: 100%;
+    height: calc(100vh - 4rem); /* Adjust height dynamically to fit within viewport */
+    overflow: hidden;
 }
 
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+/* Main Content Area */
+.main-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
 }
 
+#centerBtn {
+    padding: 15px 30px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #ffffff;
+    background-color: #4A90E2;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#centerBtn:hover {
+    background-color: #357ABD;
+}
+
+/* Sidebar on the Right */
+.sidebar {
+    width: 250px;
+    padding: 20px;
+    background: #333333;
+    color: #ffffff;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.sidebar h2 {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar li {
+    margin: 10px 0;
+    font-size: 1rem;
+}
+
+/* Dark and Light Mode Support */
 @media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
+    :root {
+        color: #213547;
+        background-color: #ffffff;
+    }
 
-  a:hover {
-    color: #747bff;
-  }
+    .app-header {
+        background-color: #5376a6;
+    }
 
-  button {
-    background-color: #f9f9f9;
-  }
+    .sidebar {
+        background-color: #444;
+    }
+
+    button {
+        background-color: #f9f9f9;
+    }
+
+    #centerBtn {
+        background-color: #5376a6;
+    }
+
+    #centerBtn:hover {
+        background-color: #4a90e2;
+    }
+}
+
+/* CSS for the map container */
+.map-container {
+  width: 100%;
+  height: 80vh; /* Adjust height as needed */
+  border: 1px solid #ddd;
+  border-radius: 8px;
 }
