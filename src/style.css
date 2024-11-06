@@ -10,7 +10,7 @@ html,
 body {
   margin: 0;
   padding: 0;
-  overflow: hidden; /* Prevent scrolling */
+  overflow: hidden; 
   width: 100%;
   height: 100%;
   font-family: "Inter", system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -140,7 +140,7 @@ body {
 
 .map-container {
   width: 60%;
-  height: 60vh; /* Smaller height for a more compact display */
+  height: 60vh; 
   border: 1px solid #ddd;
   border-radius: 8px;
   margin-bottom: 10px;
