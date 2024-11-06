@@ -1,18 +1,14 @@
 // @deno-types="npm:@types/leaflet@^1.9.14"
 import leaflet from "leaflet";
-
-// Import CSS styles
 import "./style.css";
 import "leaflet/dist/leaflet.css";
-
-// Import additional utilities
 import "./leafletWorkaround.ts";
 import luck from "./luck.ts"; // Deterministic random number generator
 
 // Define constants
 const APP_NAME = "Coin Hunter 💰";
-const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504); // Classroom location
-const GAMEPLAY_ZOOM_LEVEL = 17; // Adjusted zoom level to make the map appear smaller
+const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504); 
+const GAMEPLAY_ZOOM_LEVEL = 17; 
 const TILE_DEGREES = 1e-4;
 const NEIGHBORHOOD_SIZE = 8;
 const CACHE_SPAWN_PROBABILITY = 0.1;
@@ -42,7 +38,6 @@ app.innerHTML = `
   </div>
 `;
 
-// Initialize Leaflet Map
 const map = leaflet.map("map", {
   center: OAKES_CLASSROOM,
   zoom: GAMEPLAY_ZOOM_LEVEL,
@@ -64,8 +59,10 @@ const playerMarker = leaflet.marker(OAKES_CLASSROOM);
 playerMarker.bindTooltip("That's you!");
 playerMarker.addTo(map);
 
+// Array to hold coins collected by the player
 let playerInventory: string[] = [];
 
+// Function to update the inventory list in the sidebar
 function updateInventoryDisplay() {
   const inventoryList = document.getElementById("inventoryList")!;
   inventoryList.innerHTML = ""; // Clear current list
@@ -92,29 +89,26 @@ function spawnCache(i: number, j: number) {
 
   rect.bindPopup(() => {
     const popupDiv = document.createElement("div");
-
     popupDiv.innerHTML = `<div>Cache at "${i},${j}"</div>`;
     const coinList = document.createElement("ul");
-    cacheCoins.forEach((coin) => {
+    cacheCoins.forEach((coin, coinIndex) => {
       const coinItem = document.createElement("li");
       coinItem.textContent = coin;
-      coinList.appendChild(coinItem);
-    });
-    popupDiv.appendChild(coinList);
 
-    const collectButton = document.createElement("button");
-    collectButton.textContent = "Collect";
-    collectButton.onclick = () => {
-      if (cacheCoins.length > 0) {
-        const collectedCoin = cacheCoins.pop()!;
+      const collectButton = document.createElement("button");
+      collectButton.textContent = "Collect";
+      collectButton.onclick = () => {
+        const collectedCoin = cacheCoins.splice(coinIndex, 1)[0];
         playerInventory.push(collectedCoin);
         updateInventoryDisplay(); 
         rect.closePopup();
-      } else {
-        alert("No coins left to collect!");
-      }
-    };
-    popupDiv.appendChild(collectButton);
+        rect.openPopup(); 
+      };
+
+      coinItem.appendChild(collectButton);
+      coinList.appendChild(coinItem);
+    });
+    popupDiv.appendChild(coinList);
 
     const depositButton = document.createElement("button");
     depositButton.textContent = "Deposit";
@@ -123,7 +117,8 @@ function spawnCache(i: number, j: number) {
         const depositedCoin = playerInventory.pop()!;
         cacheCoins.push(depositedCoin);
         updateInventoryDisplay(); 
-        rect.closePopup();
+        rect.closePopup(); 
+        rect.openPopup(); 
       } else {
         alert("No coins in inventory to deposit!");
       }
@@ -134,6 +129,7 @@ function spawnCache(i: number, j: number) {
   });
 }
 
+// Populate the map with caches based on spawn probability
 for (let i = -NEIGHBORHOOD_SIZE; i < NEIGHBORHOOD_SIZE; i++) {
   for (let j = -NEIGHBORHOOD_SIZE; j < NEIGHBORHOOD_SIZE; j++) {
     if (luck([i, j].toString()) < CACHE_SPAWN_PROBABILITY) {
