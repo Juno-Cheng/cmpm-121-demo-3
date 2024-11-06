@@ -3,17 +3,15 @@ import leaflet from "leaflet";
 import "./style.css";
 import "leaflet/dist/leaflet.css";
 import "./leafletWorkaround.ts";
-import luck from "./luck.ts"; // Deterministic random number generator
+import luck from "./luck.ts";
 
-// Define constants
 const APP_NAME = "Coin Hunter 💰";
-const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504); 
-const GAMEPLAY_ZOOM_LEVEL = 17; 
+const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504);
+const GAMEPLAY_ZOOM_LEVEL = 17;
 const TILE_DEGREES = 1e-4;
 const NEIGHBORHOOD_SIZE = 8;
 const CACHE_SPAWN_PROBABILITY = 0.1;
 
-// Set up the app's HTML structure
 const app = document.querySelector<HTMLDivElement>("#app")!;
 document.title = APP_NAME;
 app.innerHTML = `
@@ -22,18 +20,15 @@ app.innerHTML = `
   </header>
   
   <div class="app-body">
-    <!-- Main Content with Map -->
     <main class="main-content">
-      <div id="map" class="map-container"></div> <!-- Map container for Leaflet -->
-      <div id="statusPanel" class="status-panel">No coins collected yet...</div> <!-- Status panel for player coins -->
+      <div id="map" class="map-container"></div>
     </main>
 
-    <!-- Sidebar on the right side -->
     <aside class="sidebar" id="sidebar">
       <h2>Inventory</h2>
       <ul id="inventoryList">
-        <!-- Player's collected coins will be listed here -->
       </ul>
+      <p id="selectedCoinDisplay">Selected coin: None</p>
     </aside>
   </div>
 `;
@@ -59,50 +54,66 @@ const playerMarker = leaflet.marker(OAKES_CLASSROOM);
 playerMarker.bindTooltip("That's you!");
 playerMarker.addTo(map);
 
-// Array to hold coins collected by the player
 let playerInventory: string[] = [];
+let selectedCoin: string | null = null;
 
-// Function to update the inventory list in the sidebar
 function updateInventoryDisplay() {
   const inventoryList = document.getElementById("inventoryList")!;
-  inventoryList.innerHTML = ""; // Clear current list
+  const selectedCoinDisplay = document.getElementById("selectedCoinDisplay")!;
+  inventoryList.innerHTML = "";
 
-  playerInventory.forEach((coin) => {
+  playerInventory.forEach((coin, index) => {
     const listItem = document.createElement("li");
-    listItem.textContent = coin;
+    listItem.textContent = `🪙 ${coin}`;
+    listItem.style.cursor = "pointer";
+
+    listItem.onclick = () => {
+      selectedCoin = coin;
+      selectedCoinDisplay.textContent = `Selected coin: 🪙 ${coin}`;
+    };
+
     inventoryList.appendChild(listItem);
   });
 }
 
 function spawnCache(i: number, j: number) {
   const origin = OAKES_CLASSROOM;
-  const bounds = leaflet.latLngBounds([
-    [origin.lat + i * TILE_DEGREES, origin.lng + j * TILE_DEGREES],
-    [origin.lat + (i + 1) * TILE_DEGREES, origin.lng + (j + 1) * TILE_DEGREES],
-  ]);
+  const cacheLocation = leaflet.latLng(
+    origin.lat + i * TILE_DEGREES,
+    origin.lng + j * TILE_DEGREES
+  );
 
   const numberOfCoins = Math.floor(Math.random() * 5) + 1;
   const cacheCoins = Array.from({ length: numberOfCoins }, (_, index) => `${i},${j}-Coin${index + 1}`);
 
-  const rect = leaflet.rectangle(bounds);
-  rect.addTo(map);
+  // Add a 🎁 marker to represent the cache
+  const cacheMarker = leaflet.marker(cacheLocation, {
+    icon: leaflet.divIcon({
+      className: "cache-icon",
+      html: "🎁",
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+    }),
+  });
+  cacheMarker.addTo(map);
 
-  rect.bindPopup(() => {
+  cacheMarker.bindPopup(() => {
     const popupDiv = document.createElement("div");
     popupDiv.innerHTML = `<div>Cache at "${i},${j}"</div>`;
+    
     const coinList = document.createElement("ul");
     cacheCoins.forEach((coin, coinIndex) => {
       const coinItem = document.createElement("li");
-      coinItem.textContent = coin;
+      coinItem.textContent = `🪙 ${coin}`;
 
       const collectButton = document.createElement("button");
       collectButton.textContent = "Collect";
       collectButton.onclick = () => {
         const collectedCoin = cacheCoins.splice(coinIndex, 1)[0];
         playerInventory.push(collectedCoin);
-        updateInventoryDisplay(); 
-        rect.closePopup();
-        rect.openPopup(); 
+        updateInventoryDisplay();
+        cacheMarker.closePopup();
+        cacheMarker.openPopup();
       };
 
       coinItem.appendChild(collectButton);
@@ -111,16 +122,17 @@ function spawnCache(i: number, j: number) {
     popupDiv.appendChild(coinList);
 
     const depositButton = document.createElement("button");
-    depositButton.textContent = "Deposit";
+    depositButton.textContent = "Deposit Selected Coin";
     depositButton.onclick = () => {
-      if (playerInventory.length > 0) {
-        const depositedCoin = playerInventory.pop()!;
-        cacheCoins.push(depositedCoin);
-        updateInventoryDisplay(); 
-        rect.closePopup(); 
-        rect.openPopup(); 
+      if (selectedCoin) {
+        playerInventory = playerInventory.filter((coin) => coin !== selectedCoin);
+        cacheCoins.push(selectedCoin);
+        selectedCoin = null;
+        updateInventoryDisplay();
+        cacheMarker.closePopup();
+        cacheMarker.openPopup();
       } else {
-        alert("No coins in inventory to deposit!");
+        alert("No coin selected for deposit!");
       }
     };
     popupDiv.appendChild(depositButton);
@@ -129,7 +141,6 @@ function spawnCache(i: number, j: number) {
   });
 }
 
-// Populate the map with caches based on spawn probability
 for (let i = -NEIGHBORHOOD_SIZE; i < NEIGHBORHOOD_SIZE; i++) {
   for (let j = -NEIGHBORHOOD_SIZE; j < NEIGHBORHOOD_SIZE; j++) {
     if (luck([i, j].toString()) < CACHE_SPAWN_PROBABILITY) {
