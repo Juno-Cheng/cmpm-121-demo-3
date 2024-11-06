@@ -80,11 +80,14 @@ function spawnCache(i: number, j: number) {
   const origin = OAKES_CLASSROOM;
   const cacheLocation = leaflet.latLng(
     origin.lat + i * TILE_DEGREES,
-    origin.lng + j * TILE_DEGREES
+    origin.lng + j * TILE_DEGREES,
   );
 
   const numberOfCoins = Math.floor(Math.random() * 5) + 1;
-  const cacheCoins = Array.from({ length: numberOfCoins }, (_, index) => `${i},${j}-Coin${index + 1}`);
+  const cacheCoins = Array.from(
+    { length: numberOfCoins },
+    (_, index) => `${i},${j}-Coin${index + 1}`,
+  );
 
   // Add a 🎁 marker to represent the cache
   const cacheMarker = leaflet.marker(cacheLocation, {
@@ -100,7 +103,7 @@ function spawnCache(i: number, j: number) {
   cacheMarker.bindPopup(() => {
     const popupDiv = document.createElement("div");
     popupDiv.innerHTML = `<div>Cache at "${i},${j}"</div>`;
-    
+
     const coinList = document.createElement("ul");
     cacheCoins.forEach((coin, coinIndex) => {
       const coinItem = document.createElement("li");
@@ -125,7 +128,9 @@ function spawnCache(i: number, j: number) {
     depositButton.textContent = "Deposit Selected Coin";
     depositButton.onclick = () => {
       if (selectedCoin) {
-        playerInventory = playerInventory.filter((coin) => coin !== selectedCoin);
+        playerInventory = playerInventory.filter(
+          (coin) => coin !== selectedCoin,
+        );
         cacheCoins.push(selectedCoin);
         selectedCoin = null;
         updateInventoryDisplay();
