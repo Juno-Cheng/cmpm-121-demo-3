@@ -7,21 +7,46 @@ import luck from "./luck.ts";
 
 const APP_NAME = "Coin Hunter 💰";
 const NULL_ISLAND = leaflet.latLng(0, 0); // Null Island at (0°N, 0°E)
-const OAKES_COORDINATES = { lat: 36.98949379578401, lng: -122.06277128548504 }; // Latitude/Longitude of Oakes College - FROM EXAMPLE
+const OAKES_COORDINATES = { lat: 36.98949379578401, lng: -122.06277128548504 }; // Latitude/Longitude of Oakes College
 const TILE_DEGREES = 1e-4; // Grid cell size in degrees
 const NEIGHBORHOOD_SIZE = 8;
 const CACHE_SPAWN_PROBABILITY = 0.1;
 
-// Convert latitude and longitude to grid cell coordinates {i, j} relative to Null Island
-function convertLatLngToGrid(lat: number, lng: number): { i: number; j: number } {
-  const i = Math.floor(lat / TILE_DEGREES);
-  const j = Math.floor(lng / TILE_DEGREES);
-  return { i, j };
+// Cell class representing each unique grid cell with Flyweight pattern
+class Cell {
+  constructor(
+    public i: number,
+    public j: number,
+  ) {}
+
+  toString(): string {
+    return `${this.i}:${this.j}`;
+  }
 }
 
-// Function to generate a unique coin identifier
-function generateCoinID(i: number, j: number, serial: number): string {
-  return `{i: ${i}, j: ${j}, serial: ${serial}}`;
+// CellFactory to manage Flyweight instances of Cells
+class CellFactory {
+  private static cellCache: Map<string, Cell> = new Map();
+
+  static getCell(i: number, j: number): Cell {
+    const key = `${i}:${j}`;
+    if (!CellFactory.cellCache.has(key)) {
+      CellFactory.cellCache.set(key, new Cell(i, j));
+    }
+    return CellFactory.cellCache.get(key)!;
+  }
+}
+
+// Convert latitude and longitude to a unique Cell instance
+function convertLatLngToGrid(lat: number, lng: number): Cell {
+  const i = Math.floor(lat / TILE_DEGREES);
+  const j = Math.floor(lng / TILE_DEGREES);
+  return CellFactory.getCell(i, j);
+}
+
+// Function to generate a unique coin identifier in compact format
+function generateCoinID(cell: Cell, serial: number): string {
+  return `${cell.toString()}#${serial}`;
 }
 
 // Set up main HTML structure
@@ -46,7 +71,7 @@ app.innerHTML = `
   </div>
 `;
 
-// Initialize Leaflet map centered on Null Island
+// Initialize Leaflet map with initial view on Oakes College but center at Null Island
 const map = leaflet.map("map", {
   center: NULL_ISLAND,
   zoom: 3, // Lower zoom to see larger area around Null Island
@@ -65,8 +90,11 @@ leaflet
   })
   .addTo(map);
 
-// Convert Oakes College coordinates to {i, j} grid coordinates
-const oakesGridCoordinates = convertLatLngToGrid(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng);
+// Convert Oakes College coordinates to a unique Cell instance
+const oakesCell = convertLatLngToGrid(
+  OAKES_COORDINATES.lat,
+  OAKES_COORDINATES.lng,
+);
 
 let playerInventory: string[] = [];
 let selectedCoin: string | null = null;
@@ -90,16 +118,15 @@ function updateInventoryDisplay() {
   });
 }
 
-// Spawn a cache at a specific grid cell {i, j}
-function spawnCache(i: number, j: number) {
-  const cacheLat = i * TILE_DEGREES;
-  const cacheLng = j * TILE_DEGREES;
+// Spawn a cache at a specific Cell
+function spawnCache(cell: Cell) {
+  const cacheLat = cell.i * TILE_DEGREES;
+  const cacheLng = cell.j * TILE_DEGREES;
   const cacheLocation = leaflet.latLng(cacheLat, cacheLng);
 
   const numberOfCoins = Math.floor(Math.random() * 5) + 1;
-  const cacheCoins = Array.from(
-    { length: numberOfCoins },
-    (_, serial) => generateCoinID(i, j, serial),
+  const cacheCoins = Array.from({ length: numberOfCoins }, (_, serial) =>
+    generateCoinID(cell, serial),
   );
 
   // Add a 🎁 marker for each cache
@@ -115,7 +142,7 @@ function spawnCache(i: number, j: number) {
 
   cacheMarker.bindPopup(() => {
     const popupDiv = document.createElement("div");
-    popupDiv.innerHTML = `<div>Cache at {i: ${i}, j: ${j}}</div>`;
+    popupDiv.innerHTML = `<div>Cache at ${cell.toString()}</div>`;
 
     const coinList = document.createElement("ul");
     cacheCoins.forEach((coin, coinIndex) => {
@@ -160,10 +187,18 @@ function spawnCache(i: number, j: number) {
 }
 
 // Generate caches randomly in a neighborhood around Oakes College
-for (let i = oakesGridCoordinates.i - NEIGHBORHOOD_SIZE; i < oakesGridCoordinates.i + NEIGHBORHOOD_SIZE; i++) {
-  for (let j = oakesGridCoordinates.j - NEIGHBORHOOD_SIZE; j < oakesGridCoordinates.j + NEIGHBORHOOD_SIZE; j++) {
+for (
+  let i = oakesCell.i - NEIGHBORHOOD_SIZE;
+  i < oakesCell.i + NEIGHBORHOOD_SIZE;
+  i++
+) {
+  for (
+    let j = oakesCell.j - NEIGHBORHOOD_SIZE;
+    j < oakesCell.j + NEIGHBORHOOD_SIZE;
+    j++
+  ) {
     if (luck([i, j].toString()) < CACHE_SPAWN_PROBABILITY) {
-      spawnCache(i, j);
+      spawnCache(CellFactory.getCell(i, j));
     }
   }
 }
