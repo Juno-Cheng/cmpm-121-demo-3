@@ -54,6 +54,9 @@ const map = leaflet.map("map", {
   scrollWheelZoom: true,
 });
 
+// Set initial view to Oakes College
+map.setView([OAKES_COORDINATES.lat, OAKES_COORDINATES.lng], 17);
+
 leaflet
   .tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
