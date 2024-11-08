@@ -6,12 +6,25 @@ import "./leafletWorkaround.ts";
 import luck from "./luck.ts";
 
 const APP_NAME = "Coin Hunter 💰";
-const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504);
-const GAMEPLAY_ZOOM_LEVEL = 17;
-const TILE_DEGREES = 1e-4;
+const NULL_ISLAND = leaflet.latLng(0, 0); // Null Island at (0°N, 0°E)
+const OAKES_COORDINATES = { lat: 36.98949379578401, lng: -122.06277128548504 }; // Latitude/Longitude of Oakes College - FROM EXAMPLE
+const TILE_DEGREES = 1e-4; // Grid cell size in degrees
 const NEIGHBORHOOD_SIZE = 8;
 const CACHE_SPAWN_PROBABILITY = 0.1;
 
+// Convert latitude and longitude to grid cell coordinates {i, j} relative to Null Island
+function convertLatLngToGrid(lat: number, lng: number): { i: number; j: number } {
+  const i = Math.floor(lat / TILE_DEGREES);
+  const j = Math.floor(lng / TILE_DEGREES);
+  return { i, j };
+}
+
+// Function to generate a unique coin identifier
+function generateCoinID(i: number, j: number, serial: number): string {
+  return `{i: ${i}, j: ${j}, serial: ${serial}}`;
+}
+
+// Set up main HTML structure
 const app = document.querySelector<HTMLDivElement>("#app")!;
 document.title = APP_NAME;
 app.innerHTML = `
@@ -33,13 +46,12 @@ app.innerHTML = `
   </div>
 `;
 
+// Initialize Leaflet map centered on Null Island
 const map = leaflet.map("map", {
-  center: OAKES_CLASSROOM,
-  zoom: GAMEPLAY_ZOOM_LEVEL,
-  minZoom: GAMEPLAY_ZOOM_LEVEL,
-  maxZoom: GAMEPLAY_ZOOM_LEVEL,
-  zoomControl: false,
-  scrollWheelZoom: false,
+  center: NULL_ISLAND,
+  zoom: 3, // Lower zoom to see larger area around Null Island
+  zoomControl: true,
+  scrollWheelZoom: true,
 });
 
 leaflet
@@ -50,9 +62,8 @@ leaflet
   })
   .addTo(map);
 
-const playerMarker = leaflet.marker(OAKES_CLASSROOM);
-playerMarker.bindTooltip("That's you!");
-playerMarker.addTo(map);
+// Convert Oakes College coordinates to {i, j} grid coordinates
+const oakesGridCoordinates = convertLatLngToGrid(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng);
 
 let playerInventory: string[] = [];
 let selectedCoin: string | null = null;
@@ -62,7 +73,7 @@ function updateInventoryDisplay() {
   const selectedCoinDisplay = document.getElementById("selectedCoinDisplay")!;
   inventoryList.innerHTML = "";
 
-  playerInventory.forEach((coin, index) => {
+  playerInventory.forEach((coin) => {
     const listItem = document.createElement("li");
     listItem.textContent = `🪙 ${coin}`;
     listItem.style.cursor = "pointer";
@@ -76,20 +87,19 @@ function updateInventoryDisplay() {
   });
 }
 
+// Spawn a cache at a specific grid cell {i, j}
 function spawnCache(i: number, j: number) {
-  const origin = OAKES_CLASSROOM;
-  const cacheLocation = leaflet.latLng(
-    origin.lat + i * TILE_DEGREES,
-    origin.lng + j * TILE_DEGREES,
-  );
+  const cacheLat = i * TILE_DEGREES;
+  const cacheLng = j * TILE_DEGREES;
+  const cacheLocation = leaflet.latLng(cacheLat, cacheLng);
 
   const numberOfCoins = Math.floor(Math.random() * 5) + 1;
   const cacheCoins = Array.from(
     { length: numberOfCoins },
-    (_, index) => `${i},${j}-Coin${index + 1}`,
+    (_, serial) => generateCoinID(i, j, serial),
   );
 
-  // Add a 🎁 marker to represent the cache
+  // Add a 🎁 marker for each cache
   const cacheMarker = leaflet.marker(cacheLocation, {
     icon: leaflet.divIcon({
       className: "cache-icon",
@@ -102,7 +112,7 @@ function spawnCache(i: number, j: number) {
 
   cacheMarker.bindPopup(() => {
     const popupDiv = document.createElement("div");
-    popupDiv.innerHTML = `<div>Cache at "${i},${j}"</div>`;
+    popupDiv.innerHTML = `<div>Cache at {i: ${i}, j: ${j}}</div>`;
 
     const coinList = document.createElement("ul");
     cacheCoins.forEach((coin, coinIndex) => {
@@ -146,8 +156,9 @@ function spawnCache(i: number, j: number) {
   });
 }
 
-for (let i = -NEIGHBORHOOD_SIZE; i < NEIGHBORHOOD_SIZE; i++) {
-  for (let j = -NEIGHBORHOOD_SIZE; j < NEIGHBORHOOD_SIZE; j++) {
+// Generate caches randomly in a neighborhood around Oakes College
+for (let i = oakesGridCoordinates.i - NEIGHBORHOOD_SIZE; i < oakesGridCoordinates.i + NEIGHBORHOOD_SIZE; i++) {
+  for (let j = oakesGridCoordinates.j - NEIGHBORHOOD_SIZE; j < oakesGridCoordinates.j + NEIGHBORHOOD_SIZE; j++) {
     if (luck([i, j].toString()) < CACHE_SPAWN_PROBABILITY) {
       spawnCache(i, j);
     }
