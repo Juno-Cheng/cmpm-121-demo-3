@@ -125,8 +125,9 @@ function spawnCache(cell: Cell) {
   const cacheLocation = leaflet.latLng(cacheLat, cacheLng);
 
   const numberOfCoins = Math.floor(Math.random() * 5) + 1;
-  const cacheCoins = Array.from({ length: numberOfCoins }, (_, serial) =>
-    generateCoinID(cell, serial),
+  const cacheCoins = Array.from(
+    { length: numberOfCoins },
+    (_, serial) => generateCoinID(cell, serial),
   );
 
   // Add a 🎁 marker for each cache
