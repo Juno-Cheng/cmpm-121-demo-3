@@ -171,3 +171,20 @@ button {
 button:hover {
   background-color: #357abd;
 }
+
+.controls {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  display: grid;
+  grid-template-areas:
+    ". up ."
+    "left . right"
+    ". down .";
+  gap: 5px;
+}
+
+#moveUp { grid-area: up; }
+#moveLeft { grid-area: left; }
+#moveRight { grid-area: right; }
+#moveDown { grid-area: down; }

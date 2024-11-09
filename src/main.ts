@@ -5,13 +5,6 @@ import "leaflet/dist/leaflet.css";
 import "./leafletWorkaround.ts";
 import luck from "./luck.ts";
 
-const APP_NAME = "Coin Hunter 💰";
-const NULL_ISLAND = leaflet.latLng(0, 0); // Null Island at (0°N, 0°E)
-const OAKES_COORDINATES = { lat: 36.98949379578401, lng: -122.06277128548504 }; // Latitude/Longitude of Oakes College
-const TILE_DEGREES = 1e-4; // Grid cell size in degrees
-const NEIGHBORHOOD_SIZE = 8;
-const CACHE_SPAWN_PROBABILITY = 0.1;
-
 // Cell class representing each unique grid cell with Flyweight pattern
 class Cell {
   constructor(
@@ -37,17 +30,7 @@ class CellFactory {
   }
 }
 
-// Convert latitude and longitude to a unique Cell instance
-function convertLatLngToGrid(lat: number, lng: number): Cell {
-  const i = Math.floor(lat / TILE_DEGREES);
-  const j = Math.floor(lng / TILE_DEGREES);
-  return CellFactory.getCell(i, j);
-}
-
-// Function to generate a unique coin identifier in compact format
-function generateCoinID(cell: Cell, serial: number): string {
-  return `${cell.toString()}#${serial}`;
-}
+const APP_NAME = "Coin Hunter 💰";
 
 // Set up main HTML structure
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -68,20 +51,37 @@ app.innerHTML = `
       </ul>
       <p id="selectedCoinDisplay">Selected coin: None</p>
     </aside>
+
+    <!-- Directional Controls at the top-right -->
+    <div id="controls" class="controls">
+      <button id="moveUp">⬆️</button>
+      <button id="moveLeft">⬅️</button>
+      <button id="moveRight">➡️</button>
+      <button id="moveDown">⬇️</button>
+    </div>
   </div>
 `;
 
+const NULL_ISLAND = leaflet.latLng(0, 0); 
+const OAKES_COORDINATES = { lat: 36.98949379578401, lng: -122.06277128548504 }; // Latitude/Longitude of Oakes College
+const TILE_DEGREES = 1e-4; // Grid cell size in degrees
+const NEIGHBORHOOD_SIZE = 8;
+const CACHE_SPAWN_PROBABILITY = 0.1;
+// Convert Oakes College coordinates to a unique Cell instance
+const oakesCell = convertLatLngToGrid(
+  OAKES_COORDINATES.lat,
+  OAKES_COORDINATES.lng,
+);
+
+// =========== Map Settings =============
 // Initialize Leaflet map with initial view on Oakes College but center at Null Island
 const map = leaflet.map("map", {
   center: NULL_ISLAND,
-  zoom: 3, // Lower zoom to see larger area around Null Island
+  zoom: 3, 
   zoomControl: true,
   scrollWheelZoom: true,
 });
-
-// Set initial view to Oakes College
 map.setView([OAKES_COORDINATES.lat, OAKES_COORDINATES.lng], 17);
-
 leaflet
   .tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
@@ -90,32 +90,16 @@ leaflet
   })
   .addTo(map);
 
-// Convert Oakes College coordinates to a unique Cell instance
-const oakesCell = convertLatLngToGrid(
-  OAKES_COORDINATES.lat,
-  OAKES_COORDINATES.lng,
-);
+// =========== Map Functions =============
 
-let playerInventory: string[] = [];
-let selectedCoin: string | null = null;
+function convertLatLngToGrid(lat: number, lng: number): Cell {
+  const i = Math.floor(lat / TILE_DEGREES);
+  const j = Math.floor(lng / TILE_DEGREES);
+  return CellFactory.getCell(i, j);
+}
 
-function updateInventoryDisplay() {
-  const inventoryList = document.getElementById("inventoryList")!;
-  const selectedCoinDisplay = document.getElementById("selectedCoinDisplay")!;
-  inventoryList.innerHTML = "";
-
-  playerInventory.forEach((coin) => {
-    const listItem = document.createElement("li");
-    listItem.textContent = `🪙 ${coin}`;
-    listItem.style.cursor = "pointer";
-
-    listItem.onclick = () => {
-      selectedCoin = coin;
-      selectedCoinDisplay.textContent = `Selected coin: 🪙 ${coin}`;
-    };
-
-    inventoryList.appendChild(listItem);
-  });
+function generateCoinID(cell: Cell, serial: number): string {
+  return `${cell.toString()}#${serial}`;
 }
 
 // Spawn a cache at a specific Cell
@@ -202,4 +186,62 @@ for (
       spawnCache(CellFactory.getCell(i, j));
     }
   }
+}
+
+// =========== Controls =============
+
+let playerCell = oakesCell; // Start at Oakes College initially
+function movePlayer(direction: "north" | "south" | "east" | "west") {
+  let { i, j } = playerCell;
+
+  switch (direction) {
+    case "north":
+      i += 1; 
+      break;
+    case "south":
+      i -= 1; 
+      break;
+    case "east":
+      j += 1; 
+      break;
+    case "west":
+      j -= 1; 
+      break;
+  }
+
+  // Update player position and map view
+  playerCell = CellFactory.getCell(i, j);
+  const newLat = i * TILE_DEGREES;
+  const newLng = j * TILE_DEGREES;
+  map.setView([newLat, newLng]);
+}
+
+document.getElementById("moveUp")!.onclick = () => movePlayer("north");
+document.getElementById("moveDown")!.onclick = () => movePlayer("south");
+document.getElementById("moveLeft")!.onclick = () => movePlayer("west");
+document.getElementById("moveRight")!.onclick = () => movePlayer("east");
+
+
+// =========== Inventory =============
+
+let playerInventory: string[] = [];
+let selectedCoin: string | null = null;
+
+function updateInventoryDisplay() {
+  const inventoryList = document.getElementById("inventoryList")!;
+  const selectedCoinDisplay = document.getElementById("selectedCoinDisplay")!;
+  inventoryList.innerHTML = "";
+
+  playerInventory.forEach((coin) => {
+    const listItem = document.createElement("li");
+    listItem.textContent = `🪙 ${coin}`;
+    listItem.style.cursor = "pointer";
+
+    listItem.onclick = () => {
+      selectedCoin = coin;
+      selectedCoinDisplay.textContent = `Selected coin: 🪙 ${coin}`;
+    };
+
+    inventoryList.appendChild(listItem);
+  });
 }
