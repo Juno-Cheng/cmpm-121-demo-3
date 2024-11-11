@@ -155,6 +155,7 @@ function spawnCache(cell: Cell) {
       generateCoinID(cell, serial),
     );
     cache = new Cache(cell, initialCoins);
+    cacheStorage.set(cellKey,cache.toMemento());
   }
 
   const cacheLat = cell.i * TILE_DEGREES;
