@@ -125,7 +125,7 @@ let playerCell = convertLatLngToGrid(
   OAKES_COORDINATES.lat,
   OAKES_COORDINATES.lng,
 );
-let cacheStorage: Map<string, string> = new Map();
+const cacheStorage: Map<string, string> = new Map();
 let cacheMarkers: leaflet.Marker[] = [];
 
 function convertLatLngToGrid(lat: number, lng: number): Cell {
