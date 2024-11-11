@@ -5,6 +5,8 @@ import "leaflet/dist/leaflet.css";
 import "./leafletWorkaround.ts";
 import luck from "./luck.ts";
 
+// =========== Cell Classes =============
+
 // Cell class representing each unique grid cell with Flyweight pattern
 class Cell {
   constructor(
@@ -30,7 +32,13 @@ class CellFactory {
   }
 }
 
+// =========== Constants and Initialization =============
+
 const APP_NAME = "Coin Hunter 💰";
+const TILE_DEGREES = 1e-4; // Grid cell size in degrees
+const NEIGHBORHOOD_SIZE = 8;
+const CACHE_SPAWN_PROBABILITY = 0.1;
+const VISIBLE_RADIUS = 5; // Radius (in cells) within which caches are shown
 
 // Set up main HTML structure
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -62,42 +70,34 @@ app.innerHTML = `
   </div>
 `;
 
+// Initialize Leaflet map centered initially at Null Island
 const NULL_ISLAND = leaflet.latLng(0, 0); 
-const OAKES_COORDINATES = { lat: 36.98949379578401, lng: -122.06277128548504 }; // Latitude/Longitude of Oakes College
-const TILE_DEGREES = 1e-4; // Grid cell size in degrees
-const NEIGHBORHOOD_SIZE = 8;
-const CACHE_SPAWN_PROBABILITY = 0.1;
-// Convert Oakes College coordinates to a unique Cell instance
-const oakesCell = convertLatLngToGrid(
-  OAKES_COORDINATES.lat,
-  OAKES_COORDINATES.lng,
-);
-
-// =========== Map Settings =============
-// Initialize Leaflet map with initial view on Oakes College but center at Null Island
+const OAKES_COORDINATES = { lat: 36.98949379578401, lng: -122.06277128548504 };
 const map = leaflet.map("map", {
   center: NULL_ISLAND,
-  zoom: 3, 
+  zoom: 3,
   zoomControl: true,
   scrollWheelZoom: true,
 });
 map.setView([OAKES_COORDINATES.lat, OAKES_COORDINATES.lng], 17);
-leaflet
-  .tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution:
-      '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-  })
-  .addTo(map);
+leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19,
+  attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+}).addTo(map);
 
-// =========== Map Functions =============
+// =========== Player Position and Cache Management =============
 
+let playerCell = convertLatLngToGrid(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng);
+let cacheMarkers: leaflet.Marker[] = []; // Store current cache markers
+
+// Convert latitude and longitude to a unique Cell instance
 function convertLatLngToGrid(lat: number, lng: number): Cell {
   const i = Math.floor(lat / TILE_DEGREES);
   const j = Math.floor(lng / TILE_DEGREES);
   return CellFactory.getCell(i, j);
 }
 
+// Function to generate a unique coin identifier in compact format
 function generateCoinID(cell: Cell, serial: number): string {
   return `${cell.toString()}#${serial}`;
 }
@@ -114,7 +114,6 @@ function spawnCache(cell: Cell) {
     (_, serial) => generateCoinID(cell, serial),
   );
 
-  // Add a 🎁 marker for each cache
   const cacheMarker = leaflet.marker(cacheLocation, {
     icon: leaflet.divIcon({
       className: "cache-icon",
@@ -124,6 +123,7 @@ function spawnCache(cell: Cell) {
     }),
   });
   cacheMarker.addTo(map);
+  cacheMarkers.push(cacheMarker); // Add to marker list
 
   cacheMarker.bindPopup(() => {
     const popupDiv = document.createElement("div");
@@ -171,56 +171,56 @@ function spawnCache(cell: Cell) {
   });
 }
 
-// Generate caches randomly in a neighborhood around Oakes College
-for (
-  let i = oakesCell.i - NEIGHBORHOOD_SIZE;
-  i < oakesCell.i + NEIGHBORHOOD_SIZE;
-  i++
-) {
-  for (
-    let j = oakesCell.j - NEIGHBORHOOD_SIZE;
-    j < oakesCell.j + NEIGHBORHOOD_SIZE;
-    j++
-  ) {
-    if (luck([i, j].toString()) < CACHE_SPAWN_PROBABILITY) {
-      spawnCache(CellFactory.getCell(i, j));
+// Regenerate caches within a radius around the player's current cell
+function regenerateCaches() {
+  // Clear existing markers
+  cacheMarkers.forEach(marker => map.removeLayer(marker));
+  cacheMarkers = [];
+
+  // Generate new caches within the visible radius
+  for (let i = playerCell.i - VISIBLE_RADIUS; i <= playerCell.i + VISIBLE_RADIUS; i++) {
+    for (let j = playerCell.j - VISIBLE_RADIUS; j <= playerCell.j + VISIBLE_RADIUS; j++) {
+      if (luck([i, j].toString()) < CACHE_SPAWN_PROBABILITY) {
+        spawnCache(CellFactory.getCell(i, j));
+      }
     }
   }
 }
 
-// =========== Controls =============
-
-let playerCell = oakesCell; // Start at Oakes College initially
+// Move the player and regenerate caches when moving to a new location
 function movePlayer(direction: "north" | "south" | "east" | "west") {
   let { i, j } = playerCell;
 
   switch (direction) {
     case "north":
-      i += 1; 
+      i += 1;
       break;
     case "south":
-      i -= 1; 
+      i -= 1;
       break;
     case "east":
-      j += 1; 
+      j += 1;
       break;
     case "west":
-      j -= 1; 
+      j -= 1;
       break;
   }
 
-  // Update player position and map view
   playerCell = CellFactory.getCell(i, j);
   const newLat = i * TILE_DEGREES;
   const newLng = j * TILE_DEGREES;
   map.setView([newLat, newLng]);
+
+  // Regenerate caches around the new location
+  regenerateCaches();
 }
+
+// =========== Controls =============
 
 document.getElementById("moveUp")!.onclick = () => movePlayer("north");
 document.getElementById("moveDown")!.onclick = () => movePlayer("south");
 document.getElementById("moveLeft")!.onclick = () => movePlayer("west");
 document.getElementById("moveRight")!.onclick = () => movePlayer("east");
-
 
 // =========== Inventory =============
 
@@ -245,3 +245,6 @@ function updateInventoryDisplay() {
     inventoryList.appendChild(listItem);
   });
 }
+
+// Initial cache generation around starting position
+regenerateCaches();
