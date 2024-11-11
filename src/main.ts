@@ -150,9 +150,8 @@ function spawnCache(cell: Cell) {
     cache.fromMemento(savedState);
   } else {
     const numberOfCoins = Math.floor(Math.random() * 5) + 1;
-    const initialCoins = Array.from(
-      { length: numberOfCoins },
-      (_, serial) => generateCoinID(cell, serial),
+    const initialCoins = Array.from({ length: numberOfCoins }, (_, serial) =>
+      generateCoinID(cell, serial),
     );
     cache = new Cache(cell, initialCoins);
     cacheStorage.set(cellKey, cache.toMemento());
