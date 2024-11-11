@@ -7,6 +7,12 @@ import luck from "./luck.ts";
 
 // =========== Cell Classes =============
 
+// Interface for the Memento pattern
+interface Memento<T> {
+  toMemento(): T;
+  fromMemento(memento: T): void;
+}
+
 // Cell class representing each unique grid cell with Flyweight pattern
 class Cell {
   constructor(
@@ -32,13 +38,37 @@ class CellFactory {
   }
 }
 
+// Cache class that implements Memento to save and restore state
+class Cache implements Memento<string> {
+  public coins: string[];
+
+  constructor(public cell: Cell, initialCoins: string[]) {
+    this.coins = initialCoins;
+  }
+
+  toMemento(): string {
+    return JSON.stringify(this.coins); // Save the coins state as a JSON string
+  }
+
+  fromMemento(memento: string): void {
+    this.coins = JSON.parse(memento); // Restore coins state from a JSON string
+  }
+
+  removeCoin(index: number): string | null {
+    return this.coins.splice(index, 1)[0] || null;
+  }
+
+  addCoin(coin: string): void {
+    this.coins.push(coin);
+  }
+}
+
 // =========== Constants and Initialization =============
 
 const APP_NAME = "Coin Hunter 💰";
 const TILE_DEGREES = 1e-4; // Grid cell size in degrees
-const NEIGHBORHOOD_SIZE = 8;
-const CACHE_SPAWN_PROBABILITY = 0.1;
 const VISIBLE_RADIUS = 5; // Radius (in cells) within which caches are shown
+const CACHE_SPAWN_PROBABILITY = 0.1;
 
 // Set up main HTML structure
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -60,7 +90,6 @@ app.innerHTML = `
       <p id="selectedCoinDisplay">Selected coin: None</p>
     </aside>
 
-    <!-- Directional Controls at the top-right -->
     <div id="controls" class="controls">
       <button id="moveUp">⬆️</button>
       <button id="moveLeft">⬅️</button>
@@ -70,7 +99,7 @@ app.innerHTML = `
   </div>
 `;
 
-// Initialize Leaflet map centered initially at Null Island
+// Initialize Leaflet map
 const NULL_ISLAND = leaflet.latLng(0, 0); 
 const OAKES_COORDINATES = { lat: 36.98949379578401, lng: -122.06277128548504 };
 const map = leaflet.map("map", {
@@ -85,34 +114,43 @@ leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
 }).addTo(map);
 
-// =========== Player Position and Cache Management =============
-
+// =========== Player and Cache State Management =============
 let playerCell = convertLatLngToGrid(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng);
-let cacheMarkers: leaflet.Marker[] = []; // Store current cache markers
+let cacheStorage: Map<string, string> = new Map(); // Stores mementos of cache states
+let cacheMarkers: leaflet.Marker[] = []; // Stores current cache markers
 
-// Convert latitude and longitude to a unique Cell instance
 function convertLatLngToGrid(lat: number, lng: number): Cell {
   const i = Math.floor(lat / TILE_DEGREES);
   const j = Math.floor(lng / TILE_DEGREES);
   return CellFactory.getCell(i, j);
 }
 
-// Function to generate a unique coin identifier in compact format
 function generateCoinID(cell: Cell, serial: number): string {
   return `${cell.toString()}#${serial}`;
 }
 
-// Spawn a cache at a specific Cell
+// Spawn a cache and restore its state if previously visited
 function spawnCache(cell: Cell) {
+  const cellKey = cell.toString();
+  let cache: Cache;
+
+  // Check if cache has been visited and load state
+  if (cacheStorage.has(cellKey)) {
+    const savedState = cacheStorage.get(cellKey)!;
+    cache = new Cache(cell, []); 
+    cache.fromMemento(savedState); 
+  } else {
+    // Generate new coins for a fresh cache
+    const numberOfCoins = Math.floor(Math.random() * 5) + 1;
+    const initialCoins = Array.from({ length: numberOfCoins }, (_, serial) =>
+      generateCoinID(cell, serial)
+    );
+    cache = new Cache(cell, initialCoins);
+  }
+
   const cacheLat = cell.i * TILE_DEGREES;
   const cacheLng = cell.j * TILE_DEGREES;
   const cacheLocation = leaflet.latLng(cacheLat, cacheLng);
-
-  const numberOfCoins = Math.floor(Math.random() * 5) + 1;
-  const cacheCoins = Array.from(
-    { length: numberOfCoins },
-    (_, serial) => generateCoinID(cell, serial),
-  );
 
   const cacheMarker = leaflet.marker(cacheLocation, {
     icon: leaflet.divIcon({
@@ -123,25 +161,28 @@ function spawnCache(cell: Cell) {
     }),
   });
   cacheMarker.addTo(map);
-  cacheMarkers.push(cacheMarker); // Add to marker list
+  cacheMarkers.push(cacheMarker);
 
   cacheMarker.bindPopup(() => {
     const popupDiv = document.createElement("div");
     popupDiv.innerHTML = `<div>Cache at ${cell.toString()}</div>`;
 
     const coinList = document.createElement("ul");
-    cacheCoins.forEach((coin, coinIndex) => {
+    cache.coins.forEach((coin, coinIndex) => {
       const coinItem = document.createElement("li");
       coinItem.textContent = `🪙 ${coin}`;
 
       const collectButton = document.createElement("button");
       collectButton.textContent = "Collect";
       collectButton.onclick = () => {
-        const collectedCoin = cacheCoins.splice(coinIndex, 1)[0];
-        playerInventory.push(collectedCoin);
-        updateInventoryDisplay();
-        cacheMarker.closePopup();
-        cacheMarker.openPopup();
+        const collectedCoin = cache.removeCoin(coinIndex);
+        if (collectedCoin) {
+          playerInventory.push(collectedCoin);
+          updateInventoryDisplay();
+          cacheStorage.set(cellKey, cache.toMemento()); // Save cache state
+          cacheMarker.closePopup();
+          cacheMarker.openPopup();
+        }
       };
 
       coinItem.appendChild(collectButton);
@@ -149,16 +190,16 @@ function spawnCache(cell: Cell) {
     });
     popupDiv.appendChild(coinList);
 
+    // Deposit Button
     const depositButton = document.createElement("button");
     depositButton.textContent = "Deposit Selected Coin";
     depositButton.onclick = () => {
       if (selectedCoin) {
-        playerInventory = playerInventory.filter(
-          (coin) => coin !== selectedCoin,
-        );
-        cacheCoins.push(selectedCoin);
+        cache.addCoin(selectedCoin);
+        playerInventory = playerInventory.filter(coin => coin !== selectedCoin);
         selectedCoin = null;
         updateInventoryDisplay();
+        cacheStorage.set(cellKey, cache.toMemento()); // Save cache state
         cacheMarker.closePopup();
         cacheMarker.openPopup();
       } else {
@@ -171,13 +212,26 @@ function spawnCache(cell: Cell) {
   });
 }
 
-// Regenerate caches within a radius around the player's current cell
+// Move the player and regenerate caches
+function movePlayer(direction: "north" | "south" | "east" | "west") {
+  let { i, j } = playerCell;
+  switch (direction) {
+    case "north": i += 1; break;
+    case "south": i -= 1; break;
+    case "east": j += 1; break;
+    case "west": j -= 1; break;
+  }
+  playerCell = CellFactory.getCell(i, j);
+  const newLat = i * TILE_DEGREES;
+  const newLng = j * TILE_DEGREES;
+  map.setView([newLat, newLng]);
+  regenerateCaches();
+}
+
+// Regenerate caches within radius around player's position
 function regenerateCaches() {
-  // Clear existing markers
   cacheMarkers.forEach(marker => map.removeLayer(marker));
   cacheMarkers = [];
-
-  // Generate new caches within the visible radius
   for (let i = playerCell.i - VISIBLE_RADIUS; i <= playerCell.i + VISIBLE_RADIUS; i++) {
     for (let j = playerCell.j - VISIBLE_RADIUS; j <= playerCell.j + VISIBLE_RADIUS; j++) {
       if (luck([i, j].toString()) < CACHE_SPAWN_PROBABILITY) {
@@ -187,43 +241,13 @@ function regenerateCaches() {
   }
 }
 
-// Move the player and regenerate caches when moving to a new location
-function movePlayer(direction: "north" | "south" | "east" | "west") {
-  let { i, j } = playerCell;
-
-  switch (direction) {
-    case "north":
-      i += 1;
-      break;
-    case "south":
-      i -= 1;
-      break;
-    case "east":
-      j += 1;
-      break;
-    case "west":
-      j -= 1;
-      break;
-  }
-
-  playerCell = CellFactory.getCell(i, j);
-  const newLat = i * TILE_DEGREES;
-  const newLng = j * TILE_DEGREES;
-  map.setView([newLat, newLng]);
-
-  // Regenerate caches around the new location
-  regenerateCaches();
-}
-
 // =========== Controls =============
-
 document.getElementById("moveUp")!.onclick = () => movePlayer("north");
 document.getElementById("moveDown")!.onclick = () => movePlayer("south");
 document.getElementById("moveLeft")!.onclick = () => movePlayer("west");
 document.getElementById("moveRight")!.onclick = () => movePlayer("east");
 
 // =========== Inventory =============
-
 let playerInventory: string[] = [];
 let selectedCoin: string | null = null;
 
