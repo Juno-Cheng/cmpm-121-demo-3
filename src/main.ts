@@ -42,7 +42,10 @@ class CellFactory {
 class Cache implements Memento<string> {
   public coins: string[];
 
-  constructor(public cell: Cell, initialCoins: string[]) {
+  constructor(
+    public cell: Cell,
+    initialCoins: string[],
+  ) {
     this.coins = initialCoins;
   }
 
@@ -100,7 +103,7 @@ app.innerHTML = `
 `;
 
 // Initialize Leaflet map
-const NULL_ISLAND = leaflet.latLng(0, 0); 
+const NULL_ISLAND = leaflet.latLng(0, 0);
 const OAKES_COORDINATES = { lat: 36.98949379578401, lng: -122.06277128548504 };
 const map = leaflet.map("map", {
   center: NULL_ISLAND,
@@ -109,13 +112,19 @@ const map = leaflet.map("map", {
   scrollWheelZoom: true,
 });
 map.setView([OAKES_COORDINATES.lat, OAKES_COORDINATES.lng], 17);
-leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19,
-  attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-}).addTo(map);
+leaflet
+  .tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution:
+      '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  })
+  .addTo(map);
 
 // =========== Player and Cache State Management =============
-let playerCell = convertLatLngToGrid(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng);
+let playerCell = convertLatLngToGrid(
+  OAKES_COORDINATES.lat,
+  OAKES_COORDINATES.lng,
+);
 let cacheStorage: Map<string, string> = new Map(); // Stores mementos of cache states
 let cacheMarkers: leaflet.Marker[] = []; // Stores current cache markers
 
@@ -137,13 +146,13 @@ function spawnCache(cell: Cell) {
   // Check if cache has been visited and load state
   if (cacheStorage.has(cellKey)) {
     const savedState = cacheStorage.get(cellKey)!;
-    cache = new Cache(cell, []); 
-    cache.fromMemento(savedState); 
+    cache = new Cache(cell, []);
+    cache.fromMemento(savedState);
   } else {
     // Generate new coins for a fresh cache
     const numberOfCoins = Math.floor(Math.random() * 5) + 1;
     const initialCoins = Array.from({ length: numberOfCoins }, (_, serial) =>
-      generateCoinID(cell, serial)
+      generateCoinID(cell, serial),
     );
     cache = new Cache(cell, initialCoins);
   }
@@ -196,7 +205,9 @@ function spawnCache(cell: Cell) {
     depositButton.onclick = () => {
       if (selectedCoin) {
         cache.addCoin(selectedCoin);
-        playerInventory = playerInventory.filter(coin => coin !== selectedCoin);
+        playerInventory = playerInventory.filter(
+          (coin) => coin !== selectedCoin,
+        );
         selectedCoin = null;
         updateInventoryDisplay();
         cacheStorage.set(cellKey, cache.toMemento()); // Save cache state
@@ -216,10 +227,18 @@ function spawnCache(cell: Cell) {
 function movePlayer(direction: "north" | "south" | "east" | "west") {
   let { i, j } = playerCell;
   switch (direction) {
-    case "north": i += 1; break;
-    case "south": i -= 1; break;
-    case "east": j += 1; break;
-    case "west": j -= 1; break;
+    case "north":
+      i += 1;
+      break;
+    case "south":
+      i -= 1;
+      break;
+    case "east":
+      j += 1;
+      break;
+    case "west":
+      j -= 1;
+      break;
   }
   playerCell = CellFactory.getCell(i, j);
   const newLat = i * TILE_DEGREES;
@@ -230,10 +249,18 @@ function movePlayer(direction: "north" | "south" | "east" | "west") {
 
 // Regenerate caches within radius around player's position
 function regenerateCaches() {
-  cacheMarkers.forEach(marker => map.removeLayer(marker));
+  cacheMarkers.forEach((marker) => map.removeLayer(marker));
   cacheMarkers = [];
-  for (let i = playerCell.i - VISIBLE_RADIUS; i <= playerCell.i + VISIBLE_RADIUS; i++) {
-    for (let j = playerCell.j - VISIBLE_RADIUS; j <= playerCell.j + VISIBLE_RADIUS; j++) {
+  for (
+    let i = playerCell.i - VISIBLE_RADIUS;
+    i <= playerCell.i + VISIBLE_RADIUS;
+    i++
+  ) {
+    for (
+      let j = playerCell.j - VISIBLE_RADIUS;
+      j <= playerCell.j + VISIBLE_RADIUS;
+      j++
+    ) {
       if (luck([i, j].toString()) < CACHE_SPAWN_PROBABILITY) {
         spawnCache(CellFactory.getCell(i, j));
       }

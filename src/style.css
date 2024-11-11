@@ -184,7 +184,15 @@ button:hover {
   gap: 5px;
 }
 
-#moveUp { grid-area: up; }
-#moveLeft { grid-area: left; }
-#moveRight { grid-area: right; }
-#moveDown { grid-area: down; }
+#moveUp {
+  grid-area: up;
+}
+#moveLeft {
+  grid-area: left;
+}
+#moveRight {
+  grid-area: right;
+}
+#moveDown {
+  grid-area: down;
+}
