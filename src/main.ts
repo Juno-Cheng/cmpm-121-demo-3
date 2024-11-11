@@ -50,11 +50,11 @@ class Cache implements Memento<string> {
   }
 
   toMemento(): string {
-    return JSON.stringify(this.coins); // Save the coins state as a JSON string
+    return JSON.stringify(this.coins);
   }
 
   fromMemento(memento: string): void {
-    this.coins = JSON.parse(memento); // Restore coins state from a JSON string
+    this.coins = JSON.parse(memento);
   }
 
   removeCoin(index: number): string | null {
@@ -69,8 +69,8 @@ class Cache implements Memento<string> {
 // =========== Constants and Initialization =============
 
 const APP_NAME = "Coin Hunter 💰";
-const TILE_DEGREES = 1e-4; // Grid cell size in degrees
-const VISIBLE_RADIUS = 5; // Radius (in cells) within which caches are shown
+const TILE_DEGREES = 1e-4;
+const VISIBLE_RADIUS = 5;
 const CACHE_SPAWN_PROBABILITY = 0.1;
 
 // Set up main HTML structure
@@ -125,8 +125,8 @@ let playerCell = convertLatLngToGrid(
   OAKES_COORDINATES.lat,
   OAKES_COORDINATES.lng,
 );
-let cacheStorage: Map<string, string> = new Map(); // Stores mementos of cache states
-let cacheMarkers: leaflet.Marker[] = []; // Stores current cache markers
+let cacheStorage: Map<string, string> = new Map();
+let cacheMarkers: leaflet.Marker[] = [];
 
 function convertLatLngToGrid(lat: number, lng: number): Cell {
   const i = Math.floor(lat / TILE_DEGREES);
@@ -149,13 +149,13 @@ function spawnCache(cell: Cell) {
     cache = new Cache(cell, []);
     cache.fromMemento(savedState);
   } else {
-    // Generate new coins for a fresh cache
     const numberOfCoins = Math.floor(Math.random() * 5) + 1;
-    const initialCoins = Array.from({ length: numberOfCoins }, (_, serial) =>
-      generateCoinID(cell, serial),
+    const initialCoins = Array.from(
+      { length: numberOfCoins },
+      (_, serial) => generateCoinID(cell, serial),
     );
     cache = new Cache(cell, initialCoins);
-    cacheStorage.set(cellKey,cache.toMemento());
+    cacheStorage.set(cellKey, cache.toMemento());
   }
 
   const cacheLat = cell.i * TILE_DEGREES;
