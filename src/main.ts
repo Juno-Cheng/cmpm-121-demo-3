@@ -98,6 +98,7 @@ app.innerHTML = `
       <button id="moveLeft">⬅️</button>
       <button id="moveRight">➡️</button>
       <button id="moveDown">⬇️</button>
+      <button id="geoToggle">🌐</button>
     </div>
   </div>
 `;
@@ -223,6 +224,29 @@ function spawnCache(cell: Cell) {
   });
 }
 
+// Regenerate caches within radius around player's position
+function regenerateCaches() {
+  cacheMarkers.forEach((marker) => map.removeLayer(marker));
+  cacheMarkers = [];
+  for (
+    let i = playerCell.i - VISIBLE_RADIUS;
+    i <= playerCell.i + VISIBLE_RADIUS;
+    i++
+  ) {
+    for (
+      let j = playerCell.j - VISIBLE_RADIUS;
+      j <= playerCell.j + VISIBLE_RADIUS;
+      j++
+    ) {
+      if (luck([i, j].toString()) < CACHE_SPAWN_PROBABILITY) {
+        spawnCache(CellFactory.getCell(i, j));
+      }
+    }
+  }
+}
+
+// =========== Controls =============
+
 // Move the player and regenerate caches
 function movePlayer(direction: "north" | "south" | "east" | "west") {
   let { i, j } = playerCell;
@@ -247,33 +271,15 @@ function movePlayer(direction: "north" | "south" | "east" | "west") {
   regenerateCaches();
 }
 
-// Regenerate caches within radius around player's position
-function regenerateCaches() {
-  cacheMarkers.forEach((marker) => map.removeLayer(marker));
-  cacheMarkers = [];
-  for (
-    let i = playerCell.i - VISIBLE_RADIUS;
-    i <= playerCell.i + VISIBLE_RADIUS;
-    i++
-  ) {
-    for (
-      let j = playerCell.j - VISIBLE_RADIUS;
-      j <= playerCell.j + VISIBLE_RADIUS;
-      j++
-    ) {
-      if (luck([i, j].toString()) < CACHE_SPAWN_PROBABILITY) {
-        spawnCache(CellFactory.getCell(i, j));
-      }
-    }
-  }
+function getLocation(){
+
 }
 
-// =========== Controls =============
 document.getElementById("moveUp")!.onclick = () => movePlayer("north");
 document.getElementById("moveDown")!.onclick = () => movePlayer("south");
 document.getElementById("moveLeft")!.onclick = () => movePlayer("west");
 document.getElementById("moveRight")!.onclick = () => movePlayer("east");
-
+document.getElementById("geoToggle")!.onclick = () => getLocation();
 // =========== Inventory =============
 let playerInventory: string[] = [];
 let selectedCoin: string | null = null;

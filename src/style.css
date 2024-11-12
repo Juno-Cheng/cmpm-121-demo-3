@@ -179,7 +179,7 @@ button:hover {
   display: grid;
   grid-template-areas:
     ". up ."
-    "left . right"
+    "left toggle right"
     ". down .";
   gap: 5px;
 }
@@ -195,4 +195,8 @@ button:hover {
 }
 #moveDown {
   grid-area: down;
+}
+
+#geoToggle {
+  grid-area: toggle;
 }
