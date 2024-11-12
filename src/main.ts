@@ -91,6 +91,7 @@ app.innerHTML = `
       <ul id="inventoryList">
       </ul>
       <p id="selectedCoinDisplay">Selected coin: None</p>
+      <button id="reset">🚮 Reset</button>
     </aside>
 
     <div id="controls" class="controls">
@@ -127,6 +128,7 @@ let playerCell = convertLatLngToGrid(
   OAKES_COORDINATES.lng,
 );
 const cacheStorage: Map<string, string> = new Map();
+const originalCacheStorage: Map<string, string> = new Map();
 let cacheMarkers: leaflet.Marker[] = [];
 
 function convertLatLngToGrid(lat: number, lng: number): Cell {
@@ -144,7 +146,6 @@ function spawnCache(cell: Cell) {
   const cellKey = cell.toString();
   let cache: Cache;
 
-  // Check if cache has been visited and load state
   if (cacheStorage.has(cellKey)) {
     const savedState = cacheStorage.get(cellKey)!;
     cache = new Cache(cell, []);
@@ -155,7 +156,10 @@ function spawnCache(cell: Cell) {
       generateCoinID(cell, serial),
     );
     cache = new Cache(cell, initialCoins);
-    cacheStorage.set(cellKey, cache.toMemento());
+
+    const cacheState = cache.toMemento();
+    cacheStorage.set(cellKey, cacheState);
+    originalCacheStorage.set(cellKey, cacheState); // Save the original state
   }
 
   const cacheLat = cell.i * TILE_DEGREES;
@@ -200,7 +204,6 @@ function spawnCache(cell: Cell) {
     });
     popupDiv.appendChild(coinList);
 
-    // Deposit Button
     const depositButton = document.createElement("button");
     depositButton.textContent = "Deposit Selected Coin";
     depositButton.onclick = () => {
@@ -271,27 +274,44 @@ function movePlayer(direction: "north" | "south" | "east" | "west") {
   regenerateCaches();
 }
 
+// Location Button Function
 function getLocation() {
   console.log("Getting Locations.....");
-      navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        console.log("Current location:", latitude, longitude);
-        playerCell = convertLatLngToGrid(latitude, longitude);
-        map.setView([latitude, longitude]);
-        regenerateCaches();
-      },
-      (error) => {
-        console.error("Geolocation error:", error.message);
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 10000,
-        timeout: 5000,
-      }
-    );
-    console.log("Geolocation tracking enabled.");
-  
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const { latitude, longitude } = position.coords;
+      console.log("Current location:", latitude, longitude);
+      playerCell = convertLatLngToGrid(latitude, longitude);
+      map.setView([latitude, longitude]);
+      regenerateCaches();
+    },
+    (error) => {
+      console.error("Geolocation error:", error.message);
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 10000,
+      timeout: 5000,
+    }
+  );
+}
+
+// Reset Button Function
+function reset(){
+  playerInventory = [];
+  selectedCoin = null;
+  updateInventoryDisplay();
+
+  // Restore each cache to its original state
+  originalCacheStorage.forEach((initialState, cellKey) => {
+    cacheStorage.set(cellKey, initialState);
+  });
+
+  regenerateCaches();
+
+  // Optionally, reset map view to the initial location
+  playerCell = convertLatLngToGrid(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng);
+  map.setView([OAKES_COORDINATES.lat, OAKES_COORDINATES.lng], 17);
 }
 
 document.getElementById("moveUp")!.onclick = () => movePlayer("north");
@@ -299,6 +319,8 @@ document.getElementById("moveDown")!.onclick = () => movePlayer("south");
 document.getElementById("moveLeft")!.onclick = () => movePlayer("west");
 document.getElementById("moveRight")!.onclick = () => movePlayer("east");
 document.getElementById("geoToggle")!.onclick = () => getLocation();
+document.getElementById("reset")!.onclick = () => reset();
+
 // =========== Inventory =============
 let playerInventory: string[] = [];
 let selectedCoin: string | null = null;
