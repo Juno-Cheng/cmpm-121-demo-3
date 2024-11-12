@@ -131,6 +131,10 @@ const cacheStorage: Map<string, string> = new Map();
 const originalCacheStorage: Map<string, string> = new Map();
 let cacheMarkers: leaflet.Marker[] = [];
 
+// =========== Movement History Tracking ===========
+let movementHistory: leaflet.LatLng[] = [leaflet.latLng(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng)];
+const movementPolyline = leaflet.polyline(movementHistory, { color: 'blue' }).addTo(map);
+
 function convertLatLngToGrid(lat: number, lng: number): Cell {
   const i = Math.floor(lat / TILE_DEGREES);
   const j = Math.floor(lng / TILE_DEGREES);
@@ -270,19 +274,29 @@ function movePlayer(direction: "north" | "south" | "east" | "west") {
   playerCell = CellFactory.getCell(i, j);
   const newLat = i * TILE_DEGREES;
   const newLng = j * TILE_DEGREES;
+  
   map.setView([newLat, newLng]);
+  
+  // Add the new position to movement history and update polyline
+  const newPosition = leaflet.latLng(newLat, newLng);
+  movementHistory.push(newPosition);
+  movementPolyline.setLatLngs(movementHistory);
+  
   regenerateCaches();
 }
 
 // Location Button Function
 function getLocation() {
-  console.log("Getting Locations.....");
   navigator.geolocation.getCurrentPosition(
     (position) => {
       const { latitude, longitude } = position.coords;
-      console.log("Current location:", latitude, longitude);
       playerCell = convertLatLngToGrid(latitude, longitude);
       map.setView([latitude, longitude]);
+      
+      // Update movement history
+      movementHistory.push(leaflet.latLng(latitude, longitude));
+      movementPolyline.setLatLngs(movementHistory);
+      
       regenerateCaches();
     },
     (error) => {
@@ -297,21 +311,22 @@ function getLocation() {
 }
 
 // Reset Button Function
-function reset(){
+function reset() {
   playerInventory = [];
   selectedCoin = null;
   updateInventoryDisplay();
-
-  // Restore each cache to its original state
+  
   originalCacheStorage.forEach((initialState, cellKey) => {
     cacheStorage.set(cellKey, initialState);
   });
-
   regenerateCaches();
-
-  // Optionally, reset map view to the initial location
+  
   playerCell = convertLatLngToGrid(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng);
   map.setView([OAKES_COORDINATES.lat, OAKES_COORDINATES.lng], 17);
+  
+  // Clear movement history
+  movementHistory = [leaflet.latLng(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng)];
+  movementPolyline.setLatLngs(movementHistory);
 }
 
 document.getElementById("moveUp")!.onclick = () => movePlayer("north");
