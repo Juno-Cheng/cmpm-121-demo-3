@@ -170,11 +170,10 @@ function loadGameState() {
   if (savedCacheStorage) {
     const cacheData = JSON.parse(savedCacheStorage);
     for (const key in cacheData) {
-      if (cacheData.hasOwnProperty(key)) {
-        const value = cacheData[key];
-        cacheStorage.set(key, value as string);
+      if (Object.prototype.hasOwnProperty.call(cacheData, key)) {
+        cacheStorage.set(key, cacheData[key] as string);
       }
-    }
+    }    
   }
 
   if (savedMovementHistory) {
