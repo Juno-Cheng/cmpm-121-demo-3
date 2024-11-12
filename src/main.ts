@@ -271,8 +271,27 @@ function movePlayer(direction: "north" | "south" | "east" | "west") {
   regenerateCaches();
 }
 
-function getLocation(){
-
+function getLocation() {
+  console.log("Getting Locations.....");
+      navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        console.log("Current location:", latitude, longitude);
+        playerCell = convertLatLngToGrid(latitude, longitude);
+        map.setView([latitude, longitude]);
+        regenerateCaches();
+      },
+      (error) => {
+        console.error("Geolocation error:", error.message);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 10000,
+        timeout: 5000,
+      }
+    );
+    console.log("Geolocation tracking enabled.");
+  
 }
 
 document.getElementById("moveUp")!.onclick = () => movePlayer("north");
