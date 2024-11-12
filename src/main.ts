@@ -5,6 +5,29 @@ import "leaflet/dist/leaflet.css";
 import "./leafletWorkaround.ts";
 import luck from "./luck.ts";
 
+// =========== Polyfills =============
+
+// Polyfill for Object.entries
+if (!Object.entries) {
+  Object.entries = function (obj: { [key: string]: any }) {
+    const ownProps = Object.keys(obj);
+    let i = ownProps.length;
+    const resArray = new Array(i); // Preallocate the Array
+    while (i--) resArray[i] = [ownProps[i], obj[ownProps[i]]];
+    return resArray;
+  };
+}
+
+// Polyfill for Object.fromEntries
+if (!Object.fromEntries) {
+  Object.fromEntries = function (entries: [string, any][]) {
+    return entries.reduce((acc, [key, value]) => {
+      acc[key] = value;
+      return acc;
+    }, {});
+  };
+}
+
 // =========== Cell Classes =============
 
 // Interface for the Memento pattern
