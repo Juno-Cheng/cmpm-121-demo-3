@@ -15,10 +15,7 @@ interface Memento<T> {
 
 // Cell class representing each unique grid cell with Flyweight pattern
 class Cell {
-  constructor(
-    public i: number,
-    public j: number,
-  ) {}
+  constructor(public i: number, public j: number) {}
 
   toString(): string {
     return `${this.i}:${this.j}`;
@@ -42,10 +39,7 @@ class CellFactory {
 class Cache implements Memento<string> {
   public coins: string[];
 
-  constructor(
-    public cell: Cell,
-    initialCoins: string[],
-  ) {
+  constructor(public cell: Cell, initialCoins: string[]) {
     this.coins = initialCoins;
   }
 
@@ -123,17 +117,14 @@ leaflet
   .addTo(map);
 
 // =========== Player and Cache State Management =============
-let playerCell = convertLatLngToGrid(
-  OAKES_COORDINATES.lat,
-  OAKES_COORDINATES.lng,
-);
+let playerCell = convertLatLngToGrid(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng);
 const cacheStorage: Map<string, string> = new Map();
 const originalCacheStorage: Map<string, string> = new Map();
 let cacheMarkers: leaflet.Marker[] = [];
 
 // =========== Movement History Tracking ===========
 let movementHistory: leaflet.LatLng[] = [leaflet.latLng(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng)];
-const movementPolyline = leaflet.polyline(movementHistory, { color: 'blue' }).addTo(map);
+const movementPolyline = leaflet.polyline(movementHistory, { color: "blue" }).addTo(map);
 
 function convertLatLngToGrid(lat: number, lng: number): Cell {
   const i = Math.floor(lat / TILE_DEGREES);
@@ -143,6 +134,53 @@ function convertLatLngToGrid(lat: number, lng: number): Cell {
 
 function generateCoinID(cell: Cell, serial: number): string {
   return `${cell.toString()}#${serial}`;
+}
+
+// Load game state from localStorage
+function loadGameState() {
+  const savedPlayerCell = localStorage.getItem("playerCell");
+  const savedInventory = localStorage.getItem("playerInventory");
+  const savedCacheStorage = localStorage.getItem("cacheStorage");
+  const savedMovementHistory = localStorage.getItem("movementHistory");
+
+  if (savedPlayerCell) {
+    const [i, j] = JSON.parse(savedPlayerCell);
+    playerCell = CellFactory.getCell(i, j);
+    map.setView([i * TILE_DEGREES, j * TILE_DEGREES]);
+  }
+
+  if (savedInventory) {
+    playerInventory = JSON.parse(savedInventory);
+    updateInventoryDisplay();
+  }
+
+  if (savedCacheStorage) {
+    const cacheData = JSON.parse(savedCacheStorage);
+    for (const [key, value] of Object.entries(cacheData)) {
+      cacheStorage.set(key, value as string);
+    }
+  }
+
+  if (savedMovementHistory) {
+    movementHistory = JSON.parse(savedMovementHistory).map(
+      (coords: [number, number]) => leaflet.latLng(coords[0], coords[1])
+    );
+    movementPolyline.setLatLngs(movementHistory);
+  }
+}
+
+// Save game state to localStorage
+function saveGameState() {
+  localStorage.setItem("playerCell", JSON.stringify([playerCell.i, playerCell.j]));
+  localStorage.setItem("playerInventory", JSON.stringify(playerInventory));
+  localStorage.setItem(
+    "cacheStorage",
+    JSON.stringify(Object.fromEntries(cacheStorage))
+  );
+  localStorage.setItem(
+    "movementHistory",
+    JSON.stringify(movementHistory.map((latLng) => [latLng.lat, latLng.lng]))
+  );
 }
 
 // Spawn a cache and restore its state if previously visited
@@ -157,13 +195,13 @@ function spawnCache(cell: Cell) {
   } else {
     const numberOfCoins = Math.floor(Math.random() * 5) + 1;
     const initialCoins = Array.from({ length: numberOfCoins }, (_, serial) =>
-      generateCoinID(cell, serial),
+      generateCoinID(cell, serial)
     );
     cache = new Cache(cell, initialCoins);
 
     const cacheState = cache.toMemento();
     cacheStorage.set(cellKey, cacheState);
-    originalCacheStorage.set(cellKey, cacheState); // Save the original state
+    originalCacheStorage.set(cellKey, cacheState);
   }
 
   const cacheLat = cell.i * TILE_DEGREES;
@@ -198,6 +236,7 @@ function spawnCache(cell: Cell) {
           playerInventory.push(collectedCoin);
           updateInventoryDisplay();
           cacheStorage.set(cellKey, cache.toMemento()); // Save cache state
+          saveGameState(); // Save game state
           cacheMarker.closePopup();
           cacheMarker.openPopup();
         }
@@ -213,12 +252,11 @@ function spawnCache(cell: Cell) {
     depositButton.onclick = () => {
       if (selectedCoin) {
         cache.addCoin(selectedCoin);
-        playerInventory = playerInventory.filter(
-          (coin) => coin !== selectedCoin,
-        );
+        playerInventory = playerInventory.filter((coin) => coin !== selectedCoin);
         selectedCoin = null;
         updateInventoryDisplay();
         cacheStorage.set(cellKey, cache.toMemento()); // Save cache state
+        saveGameState(); // Save game state
         cacheMarker.closePopup();
         cacheMarker.openPopup();
       } else {
@@ -254,7 +292,6 @@ function regenerateCaches() {
 
 // =========== Controls =============
 
-// Move the player and regenerate caches
 function movePlayer(direction: "north" | "south" | "east" | "west") {
   let { i, j } = playerCell;
   switch (direction) {
@@ -274,29 +311,28 @@ function movePlayer(direction: "north" | "south" | "east" | "west") {
   playerCell = CellFactory.getCell(i, j);
   const newLat = i * TILE_DEGREES;
   const newLng = j * TILE_DEGREES;
-  
+
   map.setView([newLat, newLng]);
-  
-  // Add the new position to movement history and update polyline
+
   const newPosition = leaflet.latLng(newLat, newLng);
   movementHistory.push(newPosition);
   movementPolyline.setLatLngs(movementHistory);
-  
+
+  saveGameState();
   regenerateCaches();
 }
 
-// Location Button Function
 function getLocation() {
   navigator.geolocation.getCurrentPosition(
     (position) => {
       const { latitude, longitude } = position.coords;
       playerCell = convertLatLngToGrid(latitude, longitude);
       map.setView([latitude, longitude]);
-      
-      // Update movement history
+
       movementHistory.push(leaflet.latLng(latitude, longitude));
       movementPolyline.setLatLngs(movementHistory);
-      
+
+      saveGameState();
       regenerateCaches();
     },
     (error) => {
@@ -310,24 +346,23 @@ function getLocation() {
   );
 }
 
-// Reset Button Function
 function reset() {
   playerInventory = [];
   selectedCoin = null;
   updateInventoryDisplay();
-  
+  cacheStorage.clear();
   originalCacheStorage.forEach((initialState, cellKey) => {
     cacheStorage.set(cellKey, initialState);
   });
-  regenerateCaches();
-  
   playerCell = convertLatLngToGrid(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng);
   map.setView([OAKES_COORDINATES.lat, OAKES_COORDINATES.lng], 17);
-  
-  // Clear movement history
   movementHistory = [leaflet.latLng(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng)];
   movementPolyline.setLatLngs(movementHistory);
+
+  saveGameState();
+  regenerateCaches();
 }
+
 
 document.getElementById("moveUp")!.onclick = () => movePlayer("north");
 document.getElementById("moveDown")!.onclick = () => movePlayer("south");
@@ -336,7 +371,6 @@ document.getElementById("moveRight")!.onclick = () => movePlayer("east");
 document.getElementById("geoToggle")!.onclick = () => getLocation();
 document.getElementById("reset")!.onclick = () => reset();
 
-// =========== Inventory =============
 let playerInventory: string[] = [];
 let selectedCoin: string | null = null;
 
@@ -359,5 +393,6 @@ function updateInventoryDisplay() {
   });
 }
 
-// Initial cache generation around starting position
+// Load initial game state
+loadGameState();
 regenerateCaches();
