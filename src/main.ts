@@ -173,7 +173,7 @@ function loadGameState() {
       if (Object.prototype.hasOwnProperty.call(cacheData, key)) {
         cacheStorage.set(key, cacheData[key] as string);
       }
-    }    
+    }
   }
 
   if (savedMovementHistory) {
