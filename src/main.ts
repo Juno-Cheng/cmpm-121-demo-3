@@ -149,6 +149,7 @@ function generateCoinID(cell: Cell, serial: number): string {
   return `${cell.toString()}#${serial}`;
 }
 
+// =========== Loading & Saving ===========
 // Load game state from localStorage
 function loadGameState() {
   const savedPlayerCell = localStorage.getItem("playerCell");
@@ -206,6 +207,8 @@ function saveGameState() {
     JSON.stringify(movementHistory.map((latLng) => [latLng.lat, latLng.lng])),
   );
 }
+
+// =========== Spawn Cache Behaviors ===========
 
 // Spawn a cache and restore its state if previously visited
 function spawnCache(cell: Cell) {
