@@ -5,29 +5,6 @@ import "leaflet/dist/leaflet.css";
 import "./leafletWorkaround.ts";
 import luck from "./luck.ts";
 
-// =========== Polyfills =============
-
-// Polyfill for Object.entries
-if (!Object.entries) {
-  Object.entries = function (obj: { [key: string]: any }) {
-    const ownProps = Object.keys(obj);
-    let i = ownProps.length;
-    const resArray = new Array(i); // Preallocate the Array
-    while (i--) resArray[i] = [ownProps[i], obj[ownProps[i]]];
-    return resArray;
-  };
-}
-
-// Polyfill for Object.fromEntries
-if (!Object.fromEntries) {
-  Object.fromEntries = function (entries: [string, any][]) {
-    return entries.reduce((acc, [key, value]) => {
-      acc[key] = value;
-      return acc;
-    }, {});
-  };
-}
-
 // =========== Cell Classes =============
 
 // Interface for the Memento pattern
@@ -192,9 +169,13 @@ function loadGameState() {
 
   if (savedCacheStorage) {
     const cacheData = JSON.parse(savedCacheStorage);
-    for (const [key, value] of Object.entries(cacheData)) {
-      cacheStorage.set(key, value as string);
+    for (const key in cacheData) {
+      if (cacheData.hasOwnProperty(key)) {
+        const value = cacheData[key];
+        cacheStorage.set(key, value as string);
+      }
     }
+    
   }
 
   if (savedMovementHistory) {
