@@ -1,6 +1,9 @@
 # cmpm-121-demo-3
 
-This is the default `README.md` file for the D3 projects. If the student is
-aware of what's going on in their project, they should immediately replace this
-with something more descriptive. It sure would be embarrassing if they forgot to
-do that...
+This is a CMPM 121 assignment project that implements a dynamic geolocation-based map game using Leaflet, TypeScript, and various design patterns like Flyweight and Memento.
+
+## Development Notes
+
+- Git Actions & Prettier: A number of commits were dedicated to resolving conflicts between Git Actions and Prettier formatting. Ensuring consistent styling and proper linting was crucial for maintaining a clean codebase.
+
+
