@@ -15,7 +15,10 @@ interface Memento<T> {
 
 // Cell class representing each unique grid cell with Flyweight pattern
 class Cell {
-  constructor(public i: number, public j: number) {}
+  constructor(
+    public i: number,
+    public j: number,
+  ) {}
 
   toString(): string {
     return `${this.i}:${this.j}`;
@@ -39,7 +42,10 @@ class CellFactory {
 class Cache implements Memento<string> {
   public coins: string[];
 
-  constructor(public cell: Cell, initialCoins: string[]) {
+  constructor(
+    public cell: Cell,
+    initialCoins: string[],
+  ) {
     this.coins = initialCoins;
   }
 
@@ -117,14 +123,21 @@ leaflet
   .addTo(map);
 
 // =========== Player and Cache State Management =============
-let playerCell = convertLatLngToGrid(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng);
+let playerCell = convertLatLngToGrid(
+  OAKES_COORDINATES.lat,
+  OAKES_COORDINATES.lng,
+);
 const cacheStorage: Map<string, string> = new Map();
 const originalCacheStorage: Map<string, string> = new Map();
 let cacheMarkers: leaflet.Marker[] = [];
 
 // =========== Movement History Tracking ===========
-let movementHistory: leaflet.LatLng[] = [leaflet.latLng(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng)];
-const movementPolyline = leaflet.polyline(movementHistory, { color: "blue" }).addTo(map);
+let movementHistory: leaflet.LatLng[] = [
+  leaflet.latLng(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng),
+];
+const movementPolyline = leaflet
+  .polyline(movementHistory, { color: "blue" })
+  .addTo(map);
 
 function convertLatLngToGrid(lat: number, lng: number): Cell {
   const i = Math.floor(lat / TILE_DEGREES);
@@ -163,7 +176,7 @@ function loadGameState() {
 
   if (savedMovementHistory) {
     movementHistory = JSON.parse(savedMovementHistory).map(
-      (coords: [number, number]) => leaflet.latLng(coords[0], coords[1])
+      (coords: [number, number]) => leaflet.latLng(coords[0], coords[1]),
     );
     movementPolyline.setLatLngs(movementHistory);
   }
@@ -171,15 +184,18 @@ function loadGameState() {
 
 // Save game state to localStorage
 function saveGameState() {
-  localStorage.setItem("playerCell", JSON.stringify([playerCell.i, playerCell.j]));
+  localStorage.setItem(
+    "playerCell",
+    JSON.stringify([playerCell.i, playerCell.j]),
+  );
   localStorage.setItem("playerInventory", JSON.stringify(playerInventory));
   localStorage.setItem(
     "cacheStorage",
-    JSON.stringify(Object.fromEntries(cacheStorage))
+    JSON.stringify(Object.fromEntries(cacheStorage)),
   );
   localStorage.setItem(
     "movementHistory",
-    JSON.stringify(movementHistory.map((latLng) => [latLng.lat, latLng.lng]))
+    JSON.stringify(movementHistory.map((latLng) => [latLng.lat, latLng.lng])),
   );
 }
 
@@ -195,7 +211,7 @@ function spawnCache(cell: Cell) {
   } else {
     const numberOfCoins = Math.floor(Math.random() * 5) + 1;
     const initialCoins = Array.from({ length: numberOfCoins }, (_, serial) =>
-      generateCoinID(cell, serial)
+      generateCoinID(cell, serial),
     );
     cache = new Cache(cell, initialCoins);
 
@@ -252,7 +268,9 @@ function spawnCache(cell: Cell) {
     depositButton.onclick = () => {
       if (selectedCoin) {
         cache.addCoin(selectedCoin);
-        playerInventory = playerInventory.filter((coin) => coin !== selectedCoin);
+        playerInventory = playerInventory.filter(
+          (coin) => coin !== selectedCoin,
+        );
         selectedCoin = null;
         updateInventoryDisplay();
         cacheStorage.set(cellKey, cache.toMemento()); // Save cache state
@@ -342,7 +360,7 @@ function getLocation() {
       enableHighAccuracy: true,
       maximumAge: 10000,
       timeout: 5000,
-    }
+    },
   );
 }
 
@@ -354,15 +372,19 @@ function reset() {
   originalCacheStorage.forEach((initialState, cellKey) => {
     cacheStorage.set(cellKey, initialState);
   });
-  playerCell = convertLatLngToGrid(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng);
+  playerCell = convertLatLngToGrid(
+    OAKES_COORDINATES.lat,
+    OAKES_COORDINATES.lng,
+  );
   map.setView([OAKES_COORDINATES.lat, OAKES_COORDINATES.lng], 17);
-  movementHistory = [leaflet.latLng(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng)];
+  movementHistory = [
+    leaflet.latLng(OAKES_COORDINATES.lat, OAKES_COORDINATES.lng),
+  ];
   movementPolyline.setLatLngs(movementHistory);
 
   saveGameState();
   regenerateCaches();
 }
-
 
 document.getElementById("moveUp")!.onclick = () => movePlayer("north");
 document.getElementById("moveDown")!.onclick = () => movePlayer("south");
