@@ -175,7 +175,6 @@ function loadGameState() {
         cacheStorage.set(key, value as string);
       }
     }
-    
   }
 
   if (savedMovementHistory) {
@@ -193,10 +192,16 @@ function saveGameState() {
     JSON.stringify([playerCell.i, playerCell.j]),
   );
   localStorage.setItem("playerInventory", JSON.stringify(playerInventory));
+  const cacheStorageObject: { [key: string]: string } = {};
+  cacheStorage.forEach((value, key) => {
+    cacheStorageObject[key] = value;
+  });
+
   localStorage.setItem(
     "cacheStorage",
-    JSON.stringify(Object.fromEntries(cacheStorage)),
+    JSON.stringify(cacheStorageObject),
   );
+
   localStorage.setItem(
     "movementHistory",
     JSON.stringify(movementHistory.map((latLng) => [latLng.lat, latLng.lng])),
