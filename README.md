@@ -1,4 +1,4 @@
-# cmpm-121-demo-3
+# CMPM 121-Demo-3
 
 This is a CMPM 121 assignment project that implements a dynamic geolocation-based map game using Leaflet, TypeScript, and various design patterns like Flyweight and Memento.
 
